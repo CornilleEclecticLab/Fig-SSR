@@ -1,0 +1,58 @@
+EEMS Workflow Script Explanation
+================================
+
+1. Set working directory to Desktop.
+
+2. Clone EEMS code if missing:
+   - Checks for “eems” folder.
+   - Uses git to clone the dipetkov/eems repo.
+
+3. Create necessary folders:
+   - eems_input
+   - eems_results
+   - eems_plots
+
+4. Copy habitat polygon:
+   - Looks for updated_polygon.outer.txt on Desktop.
+   - Copies it to eems_input/eems_data.outer.
+   - Stops with error if missing or copy fails.
+
+5. Prepare coordinates file:
+   - Reads genalex_metadata_sp_only.csv.
+   - Extracts longitude and latitude columns.
+   - Writes space-separated coords to eems_input/eems_data.coord.
+
+6. Prepare genotype matrix:
+   - Reads genalex_geno_sp_only.csv.
+   - Converts to numeric matrix.
+   - Verifies even column count (2 alleles per locus).
+   - Calculates nSites = num_cols/2.
+   - Writes to eems_input/eems_data.sites in space-separated format.
+
+7. Count individuals and create results folder:
+   - Reads back eems_data.coord to count rows → nIndiv.
+   - Creates eems_results/run1.
+
+8. Build EEMS parameter file:
+   - Constructs params.ini with datapath, mcmcpath, nIndiv, nSites,
+     nDemes, diploid flag, and MCMC iterations.
+   - Writes to eems_input/params.ini.
+
+9. Compile and run EEMS:
+   - Changes into eems/runeems_sats/src.
+   - Runs `make darwin` (macOS compile).
+   - Checks for the ‘runeems_sats’ executable.
+   - Executes it with the params file and a fixed seed.
+
+10. Post-processing with rEEMSplots:
+    - Returns to Desktop.
+    - Defines mcmcpath and plotpath (eems_plots/run1).
+    - Creates plotpath.
+    - Installs rEEMSplots if not present.
+    - Calls `eems.plots()` with `longlat = TRUE` to generate maps.
+
+Usage
+-----
+1. Place input files (metadata CSV, genotype CSV, updated polygon) on Desktop.
+2. Adjust any paths at top if needed.
+3. Run in R

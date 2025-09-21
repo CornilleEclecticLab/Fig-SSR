@@ -1,0 +1,70 @@
+---
+title: "delta_k"
+output: html_document
+date: "2024-12-11"
+---
+
+## Read the Table into R:
+
+```{r}
+setwd("/Users/sanzhar/Desktop/Eco_Lab/analysis_v2/structure_harvester")
+evanno_data <- read.table("EvannoTableOutput.txt", header=TRUE, stringsAsFactors=FALSE)
+head(evanno_data)
+
+```
+
+## Plot ΔK against K Using Base R:
+
+```{r}
+
+# Some rows have NA for DeltaK (like K=1 or the highest K), subset non-NA values:
+evanno_filtered <- subset(evanno_data, !is.na(DeltaK))
+
+plot(evanno_filtered$K, evanno_filtered$DeltaK, type="b", pch=19,
+     xlab="K", ylab=expression(Delta*K),
+     main="Delta K vs K")
+
+
+```
+
+## Plot Using ggplot2 
+
+```{r}
+
+install.packages("ggplot2") 
+library(ggplot2)
+
+# Using the filtered data (no NA DeltaK)
+ggplot(evanno_filtered, aes(x=K, y=DeltaK)) +
+  geom_line() +
+  geom_point(size=3) +
+  theme_minimal() +
+  labs(title="Evanno's Delta K", x="K", y="Delta K")
+
+
+```
+```{r}
+# Install and load ggplot2
+#if (!require(ggplot2)) install.packages("ggplot2", dependencies=TRUE)
+library(ggplot2)
+
+# Using the filtered data (no NA DeltaK)
+plot_evanno <- ggplot(evanno_filtered, aes(x=K, y=DeltaK)) +
+  geom_line() +
+  geom_point(size=3) +
+  theme_minimal() +
+  labs(title="Evanno's Delta K for Full Dataset", x="K", y="Delta K")
+
+# Display the plot
+print(plot_evanno)
+
+# Save the plot as a high-resolution PDF file
+ggsave(filename="delta_k_plot.jpeg", 
+       plot=plot_evanno, 
+       width=8, height=6, 
+       dpi=600, 
+       device="jpeg")
+
+
+```
+

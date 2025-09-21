@@ -1,0 +1,56 @@
+Max Membership Coefficient Script Explanation
+=============================================
+
+1. Set Working Directory
+   - Uses setwd() to point to the folder containing input/output files.
+
+2. Define Color Palette
+   - A named vector 'cluster_colors' assigns each cluster (and 'grey') a hex color.
+
+3. Load Required Libraries
+   - dplyr: for data manipulation with pipes and verbs.
+   - ggplot2: for plotting.
+
+4. Define Threshold
+   - 'threshold' sets the minimum membership coefficient to consider an assignment valid (0.75).
+
+5. Read Input Data
+   - metadata: CSV with at least 'sample_id' and any other sample info.
+   - qdf_values: plain table (no header) from STRUCTURE/TESS output file 'k4.q'.
+
+6. Prepare Membership Dataframe
+   - Assign column names Cluster1–Cluster4 to the q-matrix.
+   - Combine sample IDs with membership proportions into 'qdf'.
+   - Validate that the number of rows matches metadata.
+
+7. Identify Cluster Columns
+   - 'cluster_cols' lists the four cluster proportion columns.
+
+8. Compute Max Membership & Cluster
+   - For each individual (row):
+     • max_membership: the largest proportion value across clusters.
+     • max_cluster: the name of the cluster with that maximum.
+
+9. Assign to Groups
+   - If max_membership ≥ threshold: assign to that cluster.
+   - Otherwise, label as 'grey' for admixed.
+
+10. Map Colors
+    - Look up hex colors from 'cluster_colors' based on assigned_group.
+
+11. Save Results
+    - Write 'assignment_df' to 'K4_assignments.csv' (no row names).
+
+12. Plot Distribution
+    - Histogram of max_membership values.
+    - Bars colored by assigned_group.
+    - Bin width: 0.05.
+    - Custom theme, labels, and legend at the bottom.
+
+Usage
+-----
+1. Place 'samples_metadata.csv' and 'k4.q' in the working directory.
+2. Adjust the threshold if needed.
+3. Run the script in R:
+     Rscript max_membership_coef.R
+4. View 'K4_assignments.csv' and the histogram in your R graphics device.

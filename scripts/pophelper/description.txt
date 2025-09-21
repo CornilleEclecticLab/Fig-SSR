@@ -1,0 +1,57 @@
+pophelper & Q-file Cleaner Scripts
+==================================
+
+This folder contains two utilities for organizing and visualizing STRUCTURE/TESS admixture runs:
+
+1) pophelper.R
+2) clean_all_qfiles.py
+
+---
+
+1) pophelper.R
+--------------
+Purpose:
+  • Read all “k2.q”…“k7.q” output files.
+  • Attach sample metadata (IDs, site numbers, lat/lon).
+  • Generate:
+      – Faceted barplots by site number (one PDF per K).
+      – Pie-chart maps with country labels (one PDF per K).
+      – An “organized” K=4 barplot grouped by dominant cluster.
+
+How to use:
+  1. Place your `.q` files (k2.q…k7.q) and `samples_metadata.csv` in this folder.
+  2. Edit the first setwd() line if needed to point here.
+  3. In R or RStudio, run:
+       source("pophelper.R")
+  4. You will get:
+      – `k2_barplot.pdf` … `k7_barplot.pdf`
+      – `k2_pie_map_with_country_names.pdf` … `k7_pie_map_with_country_names.pdf`
+      – `K4_barplot_by_max_cluster.pdf`
+
+Dependencies:
+  • R packages: pophelper, ggplot2, maps, mapdata, sf, cowplot, dplyr, tidyr, ggforce
+
+---
+
+2) clean_all_qfiles.py
+----------------------
+Purpose:
+  • Read each `k?.q` file and strip off any extraneous labels, keeping only the last K columns of numeric Q-values.
+  • Write out a cleaned file named `k?_cleaned.q` ready for downstream use (e.g. pophelper).
+
+How to use:
+  1. Put this script alongside your `k2.q`…`k7.q` files.
+  2. In a terminal:
+       python clean_all_qfiles.py
+  3. It will produce `k2_cleaned.q` … `k7_cleaned.q`.
+
+Dependencies:
+  • Python 3 (built-in: glob, os)
+
+---
+
+Tips
+----
+• Make sure your metadata CSV has exactly the same number of rows (samples) as each Q-file.  
+• Always run `clean_all_qfiles.py` first, then point `pophelper.R` at the cleaned `.q` files if you prefer to visualize only the cleaned output.  
+• You can adjust color palettes and map extents by editing the named vectors near the top of each script.  

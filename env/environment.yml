@@ -1,0 +1,44 @@
+name: fig-ssr
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # ---- R base + core tidy/analysis stack ----
+  - r-base>=4.3
+  - r-tidyverse
+  - r-data.table
+  - r-optparse
+  - r-jsonlite
+  - r-stringr
+  - r-glue
+  - r-here
+  - r-knitr
+  - r-rmarkdown
+  - r-cowplot
+  - r-ggpubr
+  - r-ggrepel
+  - r-patchwork
+  - r-matrixStats
+  - r-igraph
+  - r-ape
+  - r-adegenet
+  - r-tess3r           # tess3 clustering
+  # ---- rendering / docs ----
+  - pandoc
+  # ---- Python utilities (geocoding, file munging, etc.) ----
+  - python>=3.10
+  - pandas
+  - numpy
+  - pyyaml
+  - requests
+  - geopy
+  - shapely
+  - pyproj
+  - geopandas
+  # ---- convenience ----
+  - mamba
+  - pip
+  # (Optional) If you prefer the Python pophelper utilities:
+  - pip:
+      - pophelper

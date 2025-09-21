@@ -1,0 +1,14 @@
+
+
+This script performs the following steps:
+
+1. Sets the working directory.
+2. Loads the tess3r package.
+3. Reads raw genotype and metadata CSVs into R, extracting spatial coordinates.
+4. Converts the genotype data frame to a numeric matrix and renames one column.
+5. Strips allele‐suffixes from column names to identify unique loci.
+6. For each locus, counts allele copies (0, 1, or 2) for each allele size, building a new genotype matrix.
+7. Runs tess3r’s spatial ancestry inference for K = 1 through 9, using a least‐squares projection method with 4 cores.
+8. Plots cross‐validation error versus K.
+9. Selects K = 4, extracts the ancestry coefficient matrix, and creates a barplot of individual admixture proportions.
+10. Uses rworldmap to interpolate and map the spatial ancestry coefficients for K = 4.

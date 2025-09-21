@@ -1,0 +1,44 @@
+Geocoding Script Explanation
+============================
+
+1. Imports
+   - pandas: for reading and writing Excel
+   - requests: for HTTP requests to the Google API
+
+2. Configuration
+   - API_KEY: your Google Geocoding API key
+   - input_file: path to the source .xls file
+   - output_file: path for the new .xlsx with coordinates
+
+3. Load data
+   - Reads the Excel into DataFrame 'df' using xlrd engine
+   - Trims whitespace from column names
+
+4. Set up address & coord columns
+   - address_column: column containing addresses
+   - latitude_column & longitude_column: created if missing
+
+5. get_coordinates(address)
+   - Builds request URL for Google Geocoding
+   - Parses JSON response to extract latitude & longitude
+   - Returns (lat, lng) or (None, None)
+
+6. Loop through each row
+   - Skips rows with missing address
+   - Calls get_coordinates()
+   - If valid, writes back into df at that row
+   - Logs progress to console
+
+7. Save results
+   - Writes the updated DataFrame (all original + new coords)
+     to output_file as .xlsx using openpyxl
+   - Prints confirmation of save location
+
+Usage Notes
+-----------
+- Replace `API_KEY = 'ABC'` with your real key.
+- Ensure `.xls` is in the working directory.
+- Run as:
+     python geocoding.py
+- The output file will include the original data plus two new columns:
+  Latitude and Longitude.

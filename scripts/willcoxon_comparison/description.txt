@@ -1,0 +1,48 @@
+This script, willcoxon.R, automates three distinct Wilcoxon signed‐rank analyses on paired datasets of allelic richness (AR) and private alleles (AP). It expects two tab‐delimited input files in the working directory:
+
+Ap_wilcoxon_input.txt: header row of population labels, first column of locus identifiers, remaining columns of AP values.
+
+Ar_wilcoxon_input.txt: same structure but containing AR values.
+
+Both files must share identical row names (loci) and the same number/order of population columns. The script performs:
+
+Within‐AP Pairwise Tests
+
+Compares every unique pair of AP columns across loci using a paired Wilcoxon signed‐rank test.  
+Collates raw p‐values and test statistics (V).  
+Applies Benjamini–Hochberg FDR correction (p.adjust(..., method="fdr")).  
+Outputs a data frame (ap_pairwise_results) with columns:  
+  Comparison: “Pop1 vs Pop2”  
+  Raw_P: original p‐value  
+  FDR_P: adjusted p‐value  
+  Wilcoxon_V: test statistic  
+
+Within‐AR Pairwise Tests
+
+Identical procedure on the AR dataset, producing ar_pairwise_results.
+
+AR vs AP Per‐Population Tests
+
+For each population column, performs a paired test between AR and AP values.  
+Generates ar_vs_ap_results with analogous columns, labeled “Pop AR vs Pop AP.”
+
+Before running tests, the script checks that the two data matrices align:
+
+Row name consistency: throws a warning if locus identifiers differ.  
+Column count equality: stops execution if the number of populations differs.
+
+Usage
+
+1. Place both input files in the same directory.  
+2. Edit the setwd(...) line to point to that directory.  
+3. Launch R and source the script:
+
+   Rscript willcoxon.R
+
+4. Review printed data frames in the console or redirect output to files. To save results, wrap the print() calls in write.table() or write.csv() as desired.
+
+Interpretation of Results
+
+A small Raw_P indicates a significant difference in median paired observations.  
+FDR_P controls false discoveries across multiple tests; use it to identify robust comparisons.  
+Wilcoxon_V is the sum of signed ranks for positive differences; larger values imply stronger directional shifts.

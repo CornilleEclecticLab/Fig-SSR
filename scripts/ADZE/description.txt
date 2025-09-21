@@ -1,0 +1,42 @@
+ADZE Input Transformation Script Explanation
+============================================
+
+1. Import pandas for data handling.
+
+2. Load the Excel file:
+   - Define 'file_path' pointing to your raw SSR data.
+   - Read it into DataFrame 'df' with pd.read_excel().
+
+3. Quick inspection:
+   - df.head() shows the first few rows to verify structure.
+
+4. Identify allele columns:
+   - 'allele_columns_a1': all column names ending in '_A1'.
+   - 'allele_columns_a2': corresponding '_A2' names derived from the A1 list.
+
+5. Define base columns:
+   - 'sorted_sample_id' and 'cluster' will be retained on every row.
+
+6. Prepare output DataFrame:
+   - 'transformed_data' starts empty.
+
+7. Loop over each sample (row):
+   a. Extract A1 alleles + base columns into 'a1_row'.
+   b. Rename its columns to drop the '_A1' suffix.
+   c. Extract A2 alleles + base columns into 'a2_row'.
+   d. Rename its columns to drop the '_A2' suffix.
+   e. Append both rows (A1 and A2) to 'transformed_data'.
+
+8. Reset the row index on the combined DataFrame.
+
+9. Save to Excel:
+   - Define 'output_file_path' for the final ADZE input.
+   - Write 'transformed_data' to that path without row indices.
+
+10. The last line returns the output path, confirming where you can find the new file.
+
+Usage Notes
+-----------
+- This converts each individual’s two alleles per locus into two separate rows,
+  which is the format ADZE requires for calculating allelic and private allelic richness.
+- Make sure the input Excel path and the desired output path are correctly set.

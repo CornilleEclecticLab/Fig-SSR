@@ -1,0 +1,349 @@
+---
+title: "ssr_pophelper_organized"
+output: html_document
+date: "2024-12-11"
+---
+
+## 1. Install and Load Required Packages
+
+```{r}
+
+# install.packages(c("pophelper","ggplot2","maps","mapdata","sf","cowplot","dplyr","tidyr","ggforce"))
+
+library(pophelper)
+library(ggplot2)
+library(maps)
+library(mapdata)
+library(sf)
+library(cowplot)
+library(dplyr)
+library(tidyr)
+library(ggforce)
+
+
+```
+
+## 2. Set Working Directory and Load Q Files
+
+```{r}
+
+setwd("/Users/sanzhar/Desktop/Eco Lab/organized_analysis/pophelper")
+
+qfiles <- list.files(pattern="k[2-7]\\.q$")
+qlist <- readQ(qfiles) 
+
+
+```
+
+## 3. Load and Check Metadata
+
+```{r}
+
+metadata <- read.csv("samples_metadata.csv", stringsAsFactors=FALSE)
+head(metadata)
+
+num_samples <- nrow(metadata)
+num_samples_q <- nrow(qlist[[1]]) # Check the first Q file for comparison
+
+if(num_samples != num_samples_q) {
+  stop("Number of samples in metadata does not match Q files!")
+}
+
+# Extract useful columns
+samples <- metadata$sample_id
+lat <- metadata$latitude
+lon <- metadata$longitude
+population <- metadata$site_id
+site_number <- metadata$site_number
+
+
+```
+
+## Generate Only Bar Plots for Each K
+
+```{r}
+
+
+# Define an accessible color palette for clusters
+accessible_colors <- c("Cluster1"="#E69F00",
+                       "Cluster2"="#56B4E9",
+                       "Cluster3"="#009E73",
+                       "Cluster4"="#CC79A7",
+                       "grey"="#999999")
+
+for(qname in names(qlist)) {
+  kvalue <- gsub("\\.q","", qname) # e.g. "k2"
+  
+  qdf <- qlist[[qname]]
+  
+  # Add metadata columns directly
+  qdf$sample_id <- samples
+  qdf$site_id <- population
+  qdf$site_number <- site_number
+  
+  # Identify cluster columns (e.g., Cluster1, Cluster2, ...)
+  cluster_cols <- grep("Cluster", names(qdf), value=TRUE)
+  
+  # Pivot to long format
+  qdf_long <- qdf %>%
+    pivot_longer(cols = all_of(cluster_cols),
+                 names_to = "Cluster",
+                 values_to = "Proportion")
+  
+  # Reverse site_number order (e.g., from max to 1)
+  max_site_num <- max(qdf_long$site_number, na.rm=TRUE)
+  qdf_long$site_number <- factor(qdf_long$site_number, levels=rev(seq_len(max_site_num)))
+  
+  # Create barplot with the defined color palette
+  barplot_gg <- ggplot(qdf_long, aes(x=sample_id, y=Proportion, fill=Cluster)) +
+    geom_bar(stat="identity", position="stack") +
+    facet_grid(. ~ site_number, scales="free_x", space="free_x") +
+    theme_bw() +
+    theme(axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.spacing=unit(0, "lines"),
+          legend.position="bottom") +
+    scale_fill_manual(values=accessible_colors) +  # Apply accessible color palette
+    ggtitle(paste("Admixture Barplot for", toupper(kvalue), "- By Site Number"))
+  
+  ggsave(paste0(kvalue, "_barplot.pdf"), barplot_gg, width=12, height=6, dpi=300)
+}
+
+
+```
+
+## Generate Pie Chart Maps for All K Values with Country Labels
+
+```{r}
+
+# Focus region for North Africa and Eurasia (adjust as needed)
+focus_xlim <- c(-20, 60)
+focus_ylim <- c(0, 60)
+
+# Define an accessible color palette for clusters
+accessible_colors <- c("Cluster1"="#E69F00",
+                       "Cluster2"="#56B4E9",
+                       "Cluster3"="#009E73",
+                       "Cluster4"="#CC79A7",
+                       "grey"="#999999")
+
+# Create a function to generate the pie chart map for a given K
+plot_pie_map_for_k <- function(kvalue) {
+  # Extract Q data frame for the selected K
+  qdf <- qlist[[paste0(kvalue, ".q")]]
+  
+  # Add metadata columns
+  qdf$sample_id <- samples
+  qdf$site_id <- population
+  qdf$latitude <- lat
+  qdf$longitude <- lon
+  
+  # Identify cluster columns
+  cluster_cols <- grep("Cluster", names(qdf), value=TRUE)
+  
+  # Pivot longer
+  qdf_long <- qdf %>%
+    pivot_longer(cols = all_of(cluster_cols),
+                 names_to = "Cluster",
+                 values_to = "Proportion")
+  
+  # Summarize cluster proportions by site_id
+  qdf_site_summary <- qdf_long %>%
+    group_by(site_id, latitude, longitude, Cluster) %>%
+    summarise(mean_prop = mean(Proportion), .groups="drop")
+  
+  # Compute arcs for pie charts
+  qdf_pies <- qdf_site_summary %>%
+    group_by(site_id, latitude, longitude) %>%
+    arrange(Cluster) %>%
+    mutate(cumulative = cumsum(mean_prop),
+           angle_start = lag(cumulative, default=0),
+           angle_end = cumulative) %>%
+    ungroup()
+  
+  # Set a smaller pie radius
+  pie_radius <- 1
+  
+  # Get world map data
+  world_map <- map_data("world")
+  
+  # Calculate approximate country centroids to label countries
+  country_centers <- world_map %>%
+    group_by(region) %>%
+    summarise(long = mean(range(long)), lat = mean(range(lat)))
+  
+  # Plot map with pies
+  map_pie_plot <- ggplot() +
+    geom_polygon(data=world_map, aes(x=long, y=lat, group=group),
+                 fill="white", color="black") +
+    geom_arc_bar(data=qdf_pies,
+                 aes(x0=longitude, y0=latitude, r=pie_radius, r0=0,
+                     start=angle_start*2*pi, end=angle_end*2*pi, fill=Cluster),
+                 color="black", size=0.2, alpha=0.8) +
+    scale_fill_manual(values=accessible_colors) +  # Apply the color scheme
+    geom_text(data=country_centers, aes(x=long, y=lat, label=region),
+              size=2, color="black") +
+    coord_sf(xlim=focus_xlim, ylim=focus_ylim, expand=FALSE) +
+    theme_minimal() +
+    theme(legend.position="bottom") +
+    ggtitle(paste("Map of Mean Admixture Proportions for", toupper(kvalue)))
+  
+  # Save the map for this K
+  ggsave(paste0(kvalue, "_pie_map_with_country_names.pdf"), map_pie_plot, width=12, height=8, dpi=300)
+}
+
+# Run the function for all K=2 to K=7
+k_values <- gsub("\\.q","", names(qlist))  # Extract k2, k3,... from qlist names
+for(k in k_values) {
+  plot_pie_map_for_k(k)
+}
+
+```
+
+## Organized K=4 barplot
+
+```{r}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Accessible colors
+accessible_colors <- c("Cluster1"="#E69F00",
+                       "Cluster2"="#56B4E9",
+                       "Cluster3"="#009E73",
+                       "Cluster4"="#CC79A7",
+                       "grey"="#999999")
+
+# Extract Q-matrix for K=4
+qdf <- qlist[["k4.q"]]
+
+# Add sample_id (adjust if you have it stored differently)
+qdf$sample_id <- samples
+
+# Identify cluster columns (Cluster1, Cluster2, ...)
+cluster_cols <- grep("Cluster", names(qdf), value=TRUE)
+
+# Compute max membership cluster and value for each individual
+qdf <- qdf %>%
+  rowwise() %>%
+  mutate(
+    max_membership = max(c_across(all_of(cluster_cols))),
+    max_cluster = cluster_cols[which.max(c_across(all_of(cluster_cols)))]
+  ) %>%
+  ungroup()
+
+# Convert max_cluster to factor with a defined order (Cluster1 to Cluster4)
+qdf$max_cluster <- factor(qdf$max_cluster, levels=c("Cluster1","Cluster2","Cluster3","Cluster4"))
+
+# Order samples by max_cluster, then by max_membership (descending)
+qdf_ordered <- qdf %>%
+  arrange(max_cluster, desc(max_membership))
+
+# Extract the new sample order
+ordered_samples <- qdf_ordered$sample_id
+
+# Pivot longer for plotting
+qdf_long <- qdf_ordered %>%
+  pivot_longer(cols = all_of(cluster_cols),
+               names_to = "Cluster",
+               values_to = "Proportion")
+
+# Make sample_id a factor with the new order
+qdf_long$sample_id <- factor(qdf_long$sample_id, levels=ordered_samples)
+
+# Create barplot
+barplot_gg <- ggplot(qdf_long, aes(x=sample_id, y=Proportion, fill=Cluster)) +
+  geom_bar(stat="identity", position="stack", width=1) +
+  theme_bw() +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.position="bottom",
+        panel.grid=element_blank()) +
+  scale_fill_manual(values=accessible_colors) +
+  ggtitle("Admixture Barplot for K=4 - Grouped by Dominant Cluster")
+
+# Adjust margins if needed
+barplot_gg <- barplot_gg + theme(plot.margin = unit(c(1,1,1,1), "lines"))
+
+# Save plot
+ggsave("K4_barplot_by_max_cluster.pdf", barplot_gg, width=12, height=6, dpi=300)
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+
+## I
+
+```{r}
+
+
+```
+

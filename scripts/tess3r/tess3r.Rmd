@@ -1,0 +1,226 @@
+---
+title: "TESS3R"
+output: html_document
+date: "2025-04-09"
+---
+
+## Install and Load tess3r
+```{r}
+
+# Install devtools if you haven't already
+#install.packages("devtools")
+
+# Install tess3r from GitHub
+#devtools::install_github("bcm-uga/TESS3_encho_sen")
+
+library(tess3r)
+
+```
+
+## Read the Files into R and Convert the Raw SSR Data to a Suitable Format 
+```{r}
+
+# Define file paths 
+geno_file <- "/Users/sanzhar/Desktop/genalex_geno_sp_only.csv"
+meta_file <- "/Users/sanzhar/Desktop/genalex_metadata_sp_only.csv"
+
+geno_df <- read.csv(geno_file, header = TRUE, row.names = 1, stringsAsFactors = FALSE)
+meta_df <- read.csv(meta_file, header = TRUE, row.names = 1, stringsAsFactors = FALSE)
+coords <- as.matrix(meta_df[, c("longitude", "latitude")])
+stopifnot(all(rownames(geno_df) == rownames(meta_df)))
+
+
+#Standardize Column Names for the Genotype Matrix
+
+# Convert the data frame to a numeric matrix.
+geno <- as.matrix(geno_df)
+geno <- apply(geno, 2, as.numeric)
+
+# Fix the problematic column name
+colnames(geno)[colnames(geno) == "LMFC.26"] <- "LMFC26"
+
+# Check the column names 
+print(colnames(geno))
+
+
+#Recode the SSR Data to Allele Counts for tess3r
+# Clean column names so that columns corresponding to the same locus have the same base name.
+# Here we remove trailing allele indices (like .1) but ONLY when they exist after a proper locus code.
+clean_names <- gsub("\\.\\d+$", "", colnames(geno))
+# Now, group columns by these cleaned names.
+loci <- unique(clean_names)
+
+newgeno_list <- list()
+
+# Loop over each unique locus.
+for (locus in loci) {
+  # Get indices of columns corresponding to the current locus.
+  idx <- which(clean_names == locus)
+  # Subset the genotype data.
+  locus_data <- geno[, idx, drop = FALSE]
+  
+  # Check that each locus has exactly two columns.
+  if (ncol(locus_data) != 2) {
+    stop(paste("Locus", locus, "does not have exactly two columns! Found", ncol(locus_data), "columns."))
+  }
+  
+  # Ensure numeric (already done)
+  locus_data <- matrix(as.numeric(locus_data), ncol = 2)
+  
+  # Identify unique allele sizes (ignoring NA and zeros)
+  unique_alleles <- sort(unique(as.vector(locus_data)))
+  unique_alleles <- unique_alleles[!is.na(unique_alleles) & unique_alleles != 0]
+  
+  # For each unique allele, create a new column counting copies (0,1,2)
+  for (allele in unique_alleles) {
+    allele_count <- rowSums(locus_data == allele, na.rm = TRUE)
+    # Name the new column as "locus_allele", e.g., "LMFC24_108"
+    newgeno_list[[paste(locus, allele, sep = "_")]] <- allele_count
+  }
+}
+
+# Combine the new columns into a new genotype data frame.
+newgeno_df <- as.data.frame(newgeno_list)
+summary(newgeno_df)  # check that values are only 0, 1, or 2.
+newgeno_mat <- as.matrix(newgeno_df)
+
+```
+
+
+## Run tess3
+```{r}
+
+library(tess3r)
+
+# Run tess3r for K ranging from 1 to 9 (adjust K as needed)
+tess3.obj <- tess3(
+  X              = newgeno_mat,      # use the recoded genotype matrix
+  coord          = coords,           # spatial coordinates (longitude, latitude)
+  K              = 1:9,              # try various numbers of ancestral clusters
+  ploidy         = 2,                # diploid data
+  method         = "projected.ls",   # fast spatially aware method
+  openMP.core.num = 4                # number of cores (adjust as needed)
+)
+
+
+```
+
+## Checking Cross-Validation (CV) Errors
+```{r}
+
+plot(tess3.obj, pch = 19, col = "blue",
+     xlab = "Number of ancestral populations (K)",
+     ylab = "Cross-validation error")
+
+
+```
+
+## Visualize Ancestry Coefficients
+```{r}
+
+bestK <- 4
+q.matrix <- qmatrix(tess3.obj, K = bestK)
+barplot(
+  q.matrix,
+  border = NA,
+  space  = 0,
+  xlab   = "Individuals",
+  ylab   = "Ancestry proportions",
+  main   = paste("Ancestry matrix (K =", bestK, ")")
+)
+
+
+```
+
+## Spatial Mapping
+```{r}
+#install.packages("rworldmap")
+library(rworldmap)
+
+plot(
+  q.matrix,
+  coords,
+  method     = "map.max",
+  interpol   = FieldsKrigModel(10),   # or another interpolation model
+  main       = paste("Spatial Ancestry Coefficients (K =", bestK, ")"),
+  resolution = c(300, 300),
+  cex        = 0.4
+)
+
+
+```
+
+## For K=3
+```{r}
+
+bestK <- 3
+q.matrix <- qmatrix(tess3.obj, K = bestK)
+barplot(
+  q.matrix,
+  border = NA,
+  space  = 0,
+  xlab   = "Individuals",
+  ylab   = "Ancestry proportions",
+  main   = paste("Ancestry matrix (K =", bestK, ")")
+)
+plot(
+  q.matrix,
+  coords,
+  method     = "map.max",
+  interpol   = FieldsKrigModel(10),   # or another interpolation model
+  main       = paste("Spatial Ancestry Coefficients (K =", bestK, ")"),
+  resolution = c(300, 300),
+  cex        = 0.4
+)
+
+
+```
+
+
+
+## For k=2
+```{r}
+
+bestK <- 2
+q.matrix <- qmatrix(tess3.obj, K = bestK)
+barplot(
+  q.matrix,
+  border = NA,
+  space  = 0,
+  xlab   = "Individuals",
+  ylab   = "Ancestry proportions",
+  main   = paste("Ancestry matrix (K =", bestK, ")")
+)
+plot(
+  q.matrix,
+  coords,
+  method     = "map.max",
+  interpol   = FieldsKrigModel(10),   # or another interpolation model
+  main       = paste("Spatial Ancestry Coefficients (K =", bestK, ")"),
+  resolution = c(300, 300),
+  cex        = 0.4
+)
+
+
+```
+## 
+```{r}
+
+
+
+```
+
+## 
+```{r}
+
+
+
+```
+
+## 
+```{r}
+
+
+
+```
+

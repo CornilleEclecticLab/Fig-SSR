@@ -1,0 +1,108 @@
+README for STRUCTURE Job Submission Scripts
+===========================================
+
+This README describes two helper scripts for automating and managing STRUCTURE analyses on a SLURM cluster:
+
+1. **submit_all_jobs.sh**  
+2. **submit_structure_array.sh**
+
+---
+
+1) submit_all_jobs.sh
+---------------------
+
+**Purpose:**  
+Submit a series of SLURM array jobs to run STRUCTURE for K = 1 through 10.
+
+**Usage:**  
+1. Place `submit_all_jobs.sh` in your project directory.  
+2. Ensure there is a subdirectory named `logs/` alongside it.  
+3. Ensure the helper script `submit_structure_array.sh` resides in `scripts/`.  
+4. From the command line, run:
+bash submit_all_jobs.sh
+5. The script will loop K from 1 to 10 and invoke:
+sbatch --job-name=structure_K${K}
+--output=logs/structure_K${K}%A%a.out
+--error=logs/structure_K${K}%A%a.err
+--export=ALL
+scripts/submit_structure_array.sh $K
+
+**Log files:**  
+- Standard output: `logs/structure_K<k>_<jobID>_<arrayIndex>.out`  
+- Standard error:  `logs/structure_K<k>_<jobID>_<arrayIndex>.err`
+
+**Customization:**  
+- Change `{1..10}` to adjust the range of K values.  
+- Edit `--job-name`, `--output`, and `--error` options to modify naming conventions.
+
+**Dependencies:**  
+- SLURM (`sbatch`)  
+- The helper script `scripts/submit_structure_array.sh`
+
+---
+
+2) submit_structure_array.sh
+----------------------------
+
+**Purpose:**  
+Defines the SLURM job array task that runs a single STRUCTURE replicate for a specified K.
+
+**Usage:**  
+This script is called by `submit_all_jobs.sh`. Do not run it directly without arguments. It expects one argument: the value of K.
+
+Example (normally invoked by sbatch):
+sbatch submit_structure_array.sh 4
+
+**SLURM Directives:**  
+```bash
+#SBATCH --job-name=structure
+#SBATCH --output=logs/structure_%A_%a.out
+#SBATCH --error=logs/structure_%A_%a.err
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=48:00:00
+#SBATCH --mem=1G
+#SBATCH --array=1-10
+--array=1-10 means each job array will run 10 replicates (replicate IDs 1–10).
+
+Script Workflow:
+
+Load required modules:
+
+module load all
+module load gencore/2
+module load structure/2.3.4
+Create logs/ directory if it doesn’t exist:
+mkdir -p logs
+Read parameters:
+
+K=$1
+i=${SLURM_ARRAY_TASK_ID}
+Optional stagger to reduce I/O bursts:
+
+
+sleep $i
+Run STRUCTURE:
+
+structure -m mainparams \
+          -e extraparams \
+          -K $K \
+          -i data/structure_input.txt \
+          -o results/output_K${K}_rep${i}
+Expected files and folders:
+
+Input genotype data: data/structure_input.txt
+
+Parameter files: mainparams, extraparams (in the same directory)
+
+Output directory: results/
+
+Log directory: logs/
+
+Customization:
+
+Adjust --time, --mem, and --cpus-per-task to fit cluster policies and data size.
+
+Change --array=1-10 to request more or fewer replicates.
+
+Edit file paths (data/structure_input.txt, results/…) if your project structure differs.

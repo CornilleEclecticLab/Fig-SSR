@@ -1,0 +1,9 @@
+This script performs the following steps:
+
+1. Sets the working directory to where the Evanno output file is located.
+2. Reads “EvannoTableOutput.txt” into a data frame.
+3. Filters out rows where DeltaK is NA.
+4. Creates a base R plot of DeltaK versus K (line + points).
+5. Uses ggplot2 to build a modern version of the same plot.
+6. Displays the ggplot2 object.
+7. Saves the ggplot2 figure as a high-resolution JPEG named “delta_k_plot.jpeg”.
