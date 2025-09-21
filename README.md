@@ -32,7 +32,6 @@ Each subfolder includes a `README.md` describing:
 
 Create and activate the conda environment:
 
-```bash
 mamba env create -f env/environment.yml
 mamba activate fig-ssr
 
